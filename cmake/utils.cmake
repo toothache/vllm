@@ -357,7 +357,8 @@ function (define_gpu_extension_target GPU_MOD_NAME)
   # dependencies that are not necessary and may not be installed.
   if (GPU_LANGUAGE STREQUAL "CUDA")
     target_link_libraries(${GPU_MOD_NAME} PRIVATE ${CUDA_CUDA_LIB}
-      ${CUDA_LIBRARIES})
+      ${CUDA_LIBRARIES}
+      ${CUDA_CUBLAS_LIBRARIES})
   else()
     target_link_libraries(${GPU_MOD_NAME} PRIVATE ${TORCH_LIBRARIES})
   endif()

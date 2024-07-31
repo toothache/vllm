@@ -66,6 +66,12 @@ endif()
 #
 find_package(Torch REQUIRED)
 
+# cutlass is not compatible with CUDA 11.8 for MSVC builds
+# https://github.com/NVIDIA/cutlass/issues/1126
+if (MSVC AND CUDA_VERSION VERSION_LESS_EQUAL 12.0)
+  message(FATAL_ERROR "CUDA 12.0 or later is required for MSVC builds")
+endif()
+
 #
 # Forward the non-CUDA device extensions to external CMake scripts.
 #
@@ -129,6 +135,10 @@ get_torch_gpu_compiler_flags(VLLM_GPU_FLAGS ${VLLM_GPU_LANG})
 #
 if(NVCC_THREADS AND VLLM_GPU_LANG STREQUAL "CUDA")
   list(APPEND VLLM_GPU_FLAGS "--threads=${NVCC_THREADS}")
+endif()
+
+if(MSVC)
+  list(APPEND VLLM_GPU_FLAGS "-Xcompiler" "/Zc:__cplusplus")
 endif()
 
 #

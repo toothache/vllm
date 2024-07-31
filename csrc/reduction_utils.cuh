@@ -42,7 +42,18 @@ using ReduceFnType = T (*)(T, T);
 // Helper function to return the next largest power of 2
 static constexpr int _nextPow2(unsigned int num) {
   if (num <= 1) return num;
+#ifdef _MSC_VER
+  num--;
+  num |= num >> 1;
+  num |= num >> 2;
+  num |= num >> 4;
+  num |= num >> 8;
+  num |= num >> 16;
+  num++;
+  return int(num);
+#else
   return 1 << (CHAR_BIT * sizeof(num) - __builtin_clz(num - 1));
+#endif
 }
 
 template <typename T, int numLanes = WARP_SIZE>

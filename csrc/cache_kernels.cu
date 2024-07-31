@@ -111,8 +111,8 @@ void copy_blocks(std::vector<torch::Tensor> const& key_caches,
 
   // Create data structures for the kernel.
   // Create an array of pointers to the key and value caches.
-  int64_t key_cache_ptrs[num_layers];
-  int64_t value_cache_ptrs[num_layers];
+  int64_t* key_cache_ptrs = new int64_t[num_layers];
+  int64_t* value_cache_ptrs = new int64_t[num_layers];
   for (int layer_idx = 0; layer_idx < num_layers; ++layer_idx) {
     key_cache_ptrs[layer_idx] =
         reinterpret_cast<int64_t>(key_caches[layer_idx].data_ptr());
@@ -145,6 +145,9 @@ void copy_blocks(std::vector<torch::Tensor> const& key_caches,
             value_cache_ptrs_tensor.data_ptr<int64_t>(),
             block_mapping.data_ptr<int64_t>(), numel_per_block);
       }));
+
+  delete[] key_cache_ptrs;
+  delete[] value_cache_ptrs;
 }
 
 namespace vllm {
