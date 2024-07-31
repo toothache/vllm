@@ -61,11 +61,12 @@ envs = load_module_from_path('envs', os.path.join(ROOT_DIR, 'vllm', 'envs.py'))
 
 VLLM_TARGET_DEVICE = envs.VLLM_TARGET_DEVICE
 
-# vLLM only supports Linux platform
-assert sys.platform.startswith(
-    "linux"), "vLLM only supports Linux platform (including WSL)."
 
 MAIN_CUDA_VERSION = "12.1"
+
+
+def is_win32() -> bool:
+    return sys.platform == "win32"
 
 
 def is_sccache_available() -> bool:
@@ -179,7 +180,10 @@ class cmake_build_ext(build_ext):
 
         # Pass the python executable to cmake so it can find an exact
         # match.
-        cmake_args += ['-DVLLM_PYTHON_EXECUTABLE={}'.format(sys.executable)]
+        if is_win32():
+            cmake_args += ['-DVLLM_PYTHON_EXECUTABLE={}'.format(sys.executable.replace("\\", "/"))]
+        else:
+            cmake_args += ['-DVLLM_PYTHON_EXECUTABLE={}'.format(sys.executable)]
 
         if _install_punica():
             cmake_args += ['-DVLLM_INSTALL_PUNICA_KERNELS=ON']
@@ -192,7 +196,7 @@ class cmake_build_ext(build_ext):
         if nvcc_threads:
             cmake_args += ['-DNVCC_THREADS={}'.format(nvcc_threads)]
 
-        if is_ninja_available():
+        if not is_win32() and is_ninja_available():
             build_tool = ['-G', 'Ninja']
             cmake_args += [
                 '-DCMAKE_JOB_POOL_COMPILE:STRING=compile',
@@ -201,10 +205,11 @@ class cmake_build_ext(build_ext):
         else:
             # Default build tool to whatever cmake picks.
             build_tool = []
+
         subprocess.check_call(
             ['cmake', ext.cmake_lists_dir, *build_tool, *cmake_args],
             cwd=self.build_temp)
-
+        
     def build_extensions(self) -> None:
         # Ensure that CMake is present and working
         try:
@@ -224,12 +229,22 @@ class cmake_build_ext(build_ext):
 
         num_jobs, _ = self.compute_num_jobs()
 
-        build_args = [
-            "--build",
-            ".",
-            f"-j={num_jobs}",
-            *[f"--target={name}" for name in targets],
-        ]
+        if is_win32():
+            build_args = [
+                "--build",
+                ".",
+                "--config RelWithDebInfo",
+                *[f"--target {name}" for name in targets],
+                "--",
+                f"/m:{num_jobs}",
+            ]
+        else:
+            build_args = [
+                "--build",
+                ".",
+                f"-j={num_jobs}",
+                *[f"--target={name}" for name in targets],
+            ]
 
         subprocess.check_call(["cmake", *build_args], cwd=self.build_temp)
 
