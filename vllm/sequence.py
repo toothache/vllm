@@ -350,6 +350,7 @@ class Sequence:
         lora_request: Optional[LoRARequest] = None,
         prompt_adapter_request: Optional[PromptAdapterRequest] = None,
         from_decoder_prompt: bool = True,
+        rope_original_max_position_embeddings: int = -1
     ) -> None:
         self.seq_id = seq_id
         self.inputs = inputs
@@ -358,6 +359,7 @@ class Sequence:
         self.lora_request = lora_request
         self.prompt_adapter_request = prompt_adapter_request
         self.from_decoder_prompt = from_decoder_prompt
+        self.rope_original_max_position_embeddings = rope_original_max_position_embeddings
         self._prompt: Optional[str] = None
         self._prompt_token_ids: Optional[List[int]] = None
 
@@ -544,6 +546,12 @@ class Sequence:
 
     def is_prefill(self) -> bool:
         return self.data.stage == SequenceStage.PREFILL
+
+    def needs_recompute(self) -> bool:
+        return self.status == SequenceStatus.RUNNING and \
+            self.get_output_len() > 0 and \
+            self.rope_original_max_position_embeddings >= 0 and \
+            self.get_len() == self.rope_original_max_position_embeddings + 1
 
     def __repr__(self) -> str:
         return (f"Sequence(seq_id={self.seq_id}, "

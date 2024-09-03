@@ -577,7 +577,8 @@ class Scheduler:
                 self.output_proc_callback()
                 self.running = tmp
 
-            while not self._can_append_slots(seq_group):
+            needs_recompute = any(seq.needs_recompute() for seq in seq_group.get_seqs())
+            while needs_recompute or not self._can_append_slots(seq_group):
                 budget.subtract_num_batched_tokens(seq_group.request_id,
                                                    num_running_tokens)
                 num_running_seqs = seq_group.get_max_num_running_seqs()
@@ -587,6 +588,13 @@ class Scheduler:
                 if (curr_loras is not None and seq_group.lora_int_id > 0
                         and seq_group.lora_int_id in curr_loras):
                     curr_loras.remove(seq_group.lora_int_id)
+
+                if needs_recompute:
+                    preempted_mode = self._preempt(seq_group,
+                                                   blocks_to_swap_out)
+                    assert preempted_mode == PreemptionMode.RECOMPUTE
+                    preempted.append(seq_group)
+                    break
 
                 if running_queue:
                     # Preempt the lowest-priority sequence groups.

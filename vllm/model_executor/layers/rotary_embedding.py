@@ -517,6 +517,7 @@ class Phi3LongRoPEScaledRotaryEmbedding(nn.Module):
                 "`Phi3LongRoPEScaledRotaryEmbedding` only supports neox_style."
             )
 
+        print(f"original_max_position_embeddings = {original_max_position_embeddings}")
         self.head_size = head_size
         self.max_position_embeddings = max_position_embeddings
         self.original_max_position_embeddings = original_max_position_embeddings
@@ -591,7 +592,7 @@ class Phi3LongRoPEScaledRotaryEmbedding(nn.Module):
         key = key.view(*key.shape[:-1], -1, self.head_size)
 
         k = self.original_max_position_embeddings
-        long_prompt_offset = (torch.any(positions > k).float() *
+        long_prompt_offset = (torch.any(positions >= k).float() *
                               torch.full_like(positions, k)).long()
         idx = (torch.add(positions, long_prompt_offset)
                if long_prompt_offset is not None else positions)

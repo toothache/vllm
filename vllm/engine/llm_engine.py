@@ -665,8 +665,17 @@ class LLMEngine:
         seq_id = next(self.seq_counter)
         eos_token_id = self._get_eos_token_id(lora_request)
 
+        # Check if longrope is selected.
+        # For longrope, sequence needs to be recomputed at the short/long scale boundary.
+        rope_original_max_position_embeddings = None
+        if self.model_config.hf_config is not None:
+            rope_scaling = getattr(self.model_config.hf_config, 'rope_scaling', None)
+            if rope_scaling and rope_scaling.get("type", None) == 'longrope':
+                rope_original_max_position_embeddings = rope_scaling['original_max_position_embeddings']
+
         seq = Sequence(seq_id, processed_inputs, block_size, eos_token_id,
-                       lora_request, prompt_adapter_request)
+                       lora_request, prompt_adapter_request,
+                       rope_original_max_position_embeddings=rope_original_max_position_embeddings)
 
         encoder_seq = None
         if 'encoder_prompt_token_ids' in processed_inputs:
